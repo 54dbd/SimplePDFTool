@@ -6,6 +6,7 @@ from math import sqrt
 from pikepdf import Pdf
 from PIL import Image
 from tkinter import filedialog, messagebox
+from tkinterdnd2 import TkinterDnD, DND_FILES 
 from PyPDF2 import PdfReader, PdfWriter
 
 
@@ -40,7 +41,7 @@ class PDFProcessor:
     
     def remove_signature(self, save_dir):
         """
-        移除 PDF 中的签名
+        移除 PDF 中的签名 并尝试保存签名中的图像
         """
         def extract_images_from_form_xobject(form_xobject):
             """
@@ -68,7 +69,8 @@ class PDFProcessor:
             data = image_obj.get_data()            
             ideal_width = int(sqrt(len(data))) - 1
             filter_type = image_obj.get("/Filter")
-            image_path = f"{save_dir}/{self.fileName}/signature_{count}.png"
+            image_path = f"{save_dir}/[Images] {self.fileName}/signature_{count}.png"
+            os.makedirs(f"{save_dir}/[Images] {self.fileName}", exist_ok=True)
 
             if filter_type == "/DCTDecode":
                 # 保存为 JPEG
@@ -192,8 +194,8 @@ class PDFProcessor:
                                 img.putdata(new_data)
 
                                 # 保存处理后的图像
-                                image_path = f"{save_dir}/{self.fileName}/stamp_{stamp_count}.png"
-                                os.makedirs(f"{save_dir}/{self.fileName}", exist_ok=True)
+                                image_path = f"{save_dir}/[Images] {self.fileName}/stamp_{stamp_count}.png"
+                                os.makedirs(f"{save_dir}/[Images] {self.fileName}", exist_ok=True)
                                 stamp_count += 1
                                 img.save(image_path, format="PNG")
                                 extracted = True
@@ -230,10 +232,15 @@ class PDFToolGUI:
     def __init__(self, root):
         self.root = root
         self.root.title("PDF 工具")
-        self.root.geometry("400x200")
+        self.root.geometry("400x300")
         self.root.resizable(False, False)
-        self.processor = PDFProcessor()
+        self.processors: list[PDFProcessor] = []
         self.create_widgets()
+
+        # 启用拖放支持
+        self.root.drop_target_register(DND_FILES)
+        self.root.dnd_bind("<<Drop>>", self.handle_file_drop)
+
 
     def create_widgets(self):
         """创建 GUI 组件"""
@@ -242,61 +249,135 @@ class PDFToolGUI:
         self.open_button.pack(pady=10)
 
         # 解锁按钮
-        self.unlock_button = tk.Button(text="解锁 PDF", command=self.unlock_pdf, state=tk.DISABLED)
+        self.unlock_button = tk.Button(text="解锁 PDF 并提取所有图片", command=self.unlock_all_pdf, state=tk.DISABLED)
         self.unlock_button.pack(pady=10)  # 使用 padx 增加按钮之间的间距
         
-        # 提取印章按钮
-        self.extract_button = tk.Button(self.root, text="提取印章", command=self.extract_stamp, state=tk.DISABLED)
-        self.extract_button.pack(pady=10)
+        # 清空按钮
+        self.clear_button = tk.Button(text="清空", command=self.clear_pdf_list ,state=tk.DISABLED)
+        self.clear_button.pack(pady=10)
+        
+        # 显示所有已导入的 pdf
+        self.pdf_list = tk.Text(self.root, height=5, width=50)
+        self.pdf_list.pack(pady=10)
+        
+        
+        
+    def clear_pdf_list(self):
+        self.processors = []
+        self.refresh_pdf_list()
+        self.unlock_button.config(state=tk.DISABLED)
+    
+    def refresh_pdf_list(self):
+        self.pdf_list.delete(1.0, tk.END)
+        if not self.processors:
+            self.clear_button.config(state=tk.DISABLED)
+        else:
+            self.clear_button.config(state=tk.NORMAL)
+        for index, processor in enumerate(self.processors):
+            self.pdf_list.insert(tk.END, f"File{index+1}. {processor.fileName}\n")
+                    
+    def handle_file_drop(self, event):
+        """处理文件拖放"""  
+        def split_filenames(input_string):
+            """
+            将输入的文件名字符串分割为文件名列表。
+            - 文件名用空格分隔。
+            - 如果文件名包含空格，则用大括号 {} 包裹。
 
+            :param input_string: 包含文件名的字符串
+            :return: 分割后的文件名列表
+            """
+            filenames = []
+            current_file = []
+            in_braces = False
+
+            for char in input_string:
+                if char == '{':  # 开始文件名中的大括号
+                    in_braces = True
+                    current_file = []
+                elif char == '}':  # 结束文件名中的大括号
+                    in_braces = False
+                    filenames.append("".join(current_file))
+                    current_file = []
+                elif char == ' ' and not in_braces:  # 文件名分隔符（仅在不在大括号内时生效）
+                    if current_file:
+                        filenames.append("".join(current_file))
+                        current_file = []
+                else:  # 其他字符，加入当前文件名
+                    current_file.append(char)
+
+            # 处理最后一个文件名
+            if current_file:
+                filenames.append("".join(current_file))
+
+            return filenames
+        
+        file_paths = split_filenames(str(event.data))
+        for file_path in file_paths:
+            file_path = file_path.replace("{", "").replace("}", "")
+            if os.path.isfile(file_path) and file_path.lower().endswith(".pdf"):
+                newProcesspr = PDFProcessor()
+                if newProcesspr.open_pdf(file_path):
+                        self.processors.append(newProcesspr)
+                
+            else:
+                messagebox.showerror("错误", f"仅支持拖放 PDF 文件！\n错误文件:{file_path}")
+        self.unlock_button.config(state=tk.NORMAL)
+        self.refresh_pdf_list()
+        
     def open_pdf(self):
-        file_path = filedialog.askopenfilename(filetypes=[("PDF Files", "*.pdf")])
-        if file_path and self.processor.open_pdf(file_path):
-            messagebox.showinfo("成功", f"已加载文件: {file_path}")
+        file_paths = filedialog.askopenfilenames(filetypes=[("PDF Files", "*.pdf")])
+        if file_paths:
+            for file_path in file_paths:
+                newProcesspr = PDFProcessor()
+                if newProcesspr.open_pdf(file_path):
+                    self.processors.append(newProcesspr)
+                    # messagebox.showinfo("成功", f"已加载文件: {file_path}")
+            self.refresh_pdf_list()
             self.unlock_button.config(state=tk.NORMAL)
     
-    def save_unlocked_pdf(self):
-        save_path = filedialog.asksaveasfilename(defaultextension=".pdf", filetypes=[("PDF Files", "*.pdf")], initialdir=self.processor.file_directory, title="保存解锁 PDF")
-        if save_path:
-            try:
-                self.processor.save_unlocked_pdf(save_path)
-                messagebox.showinfo("成功", f"解锁的 PDF 已保存到: {save_path}")
-            except Exception as e:
-                messagebox.showerror("错误", f"保存失败: {e}")
-
-    def unlock_pdf(self):
+    def save_unlocked_pdf(self, save_dir = None):
+        if not save_dir:
+            save_dir = filedialog.askdirectory(initialdir=self.processors[0].file_directory, title="选择保存目录")
         try:
-            self.processor.unlock_pdf()
-            self.processor.remove_signature()
-            messagebox.showinfo("成功", f"PDF 已解锁并移除所有签名，请选择保存目录")
-            self.save_unlocked_pdf()
-            self.extract_button.config(state=tk.NORMAL)
+            for processor in self.processors:
+                save_path = save_dir + "/[Unlocked] " + processor.fileName + ".pdf"
+                processor.save_unlocked_pdf(save_path)
+            messagebox.showinfo("成功", f"解锁的 PDF 已保存到: {save_path}")
+        except Exception as e:
+            messagebox.showerror("错误", f"保存失败: {e}")
+
+
+    def unlock_all_pdf (self):
+        """_summary_
+        解锁所有 PDF 文件，并且移除签名，保存所有图像
+        """
+        save_dir = filedialog.askdirectory(initialdir=self.processors[0].file_directory, title="选择保存目录")
+
+        try:
+            for processor in self.processors:
+                processor.unlock_pdf()
+                processor.remove_signature(save_dir)
+                processor.extract_stamp(save_dir)
+            self.save_unlocked_pdf(save_dir=save_dir)
+            # self.extract_button.config(state=tk.NORMAL)
         except Exception as e:
             messagebox.showerror("错误", f"解锁失败: {e}")
 
 
-    def extract_stamp(self):
-        save_dir = filedialog.askdirectory(initialdir=self.processor.file_directory, title="选择保存目录")
-        if save_dir:
-            try:
-                self.processor.extract_stamp(save_dir)
-                messagebox.showinfo("成功", f"印章已提取到目录: {save_dir}")
-            except Exception as e:
-                messagebox.showerror("错误", f"提取印章失败: {e}")
-
 # 启动应用
 if __name__ == "__main__":
     # pdf_path = "/Users/ross/Downloads/Inspection Certificate Sample_304L.pdf"
-    pdf_path = "/Users/ross/Downloads/remove_sign.pdf"
-    processor = PDFProcessor()
-    processor.open_pdf(pdf_path)
-    processor.unlock_pdf()
-    save_dir = "/Users/ross/Downloads"
-    processor.extract_stamp(save_dir)
-    processor.remove_signature(save_dir)
+    # pdf_path = "/Users/ross/Downloads/remove_sign.pdf"
+    # processor = PDFProcessor()
+    # processor.open_pdf(pdf_path)
+    # processor.unlock_pdf()
+    # save_dir = "/Users/ross/Downloads"
+    # processor.extract_stamp(save_dir)
+    # processor.remove_signature(save_dir)
 
-    processor.save_unlocked_pdf("/Users/ross/Downloads/remove_sign_unlocked.pdf")
+    # processor.save_unlocked_pdf("/Users/ross/Downloads/remove_sign_unlocked.pdf")
     
-    # root = tk.Tk()
-    # app = PDFToolGUI(root)
-    # root.mainloop()
+    root = TkinterDnD.Tk()
+    app = PDFToolGUI(root)
+    root.mainloop()

@@ -118,25 +118,25 @@ Contributors:
 Distributed under the GPL-3.0 License. See `LICENSE.txt` for more information.
 
 
-[contributors-shield]: https://img.shields.io/github/contributors/54dbd/Bibtex-to-gbt7714.svg?style=for-the-badge
+[contributors-shield]: https://img.shields.io/github/contributors/54dbd/SimplePDFTool.svg?style=for-the-badge
 
-[contributors-url]: https://github.com/54dbd/Bibtex-to-gbt7714/graphs/contributors
+[contributors-url]: https://github.com/54dbd/SimplePDFTool/graphs/contributors
 
-[forks-shield]: https://img.shields.io/github/forks/54dbd/Bibtex-to-gbt7714.svg?style=for-the-badge
+[forks-shield]: https://img.shields.io/github/forks/54dbd/SimplePDFTool.svg?style=for-the-badge
 
-[forks-url]: https://github.com/54dbd/Bibtex-to-gbt7714/network/members
+[forks-url]: https://github.com/54dbd/SimplePDFTool/network/members
 
-[stars-shield]: https://img.shields.io/github/stars/54dbd/Bibtex-to-gbt7714.svg?style=for-the-badge
+[stars-shield]: https://img.shields.io/github/stars/54dbd/SimplePDFTool.svg?style=for-the-badge
 
-[stars-url]: https://github.com/54dbd/Bibtex-to-gbt7714/stargazers
+[stars-url]: https://github.com/54dbd/SimplePDFTool/stargazers
 
-[issues-shield]: https://img.shields.io/github/issues/54dbd/Bibtex-to-gbt7714.svg?style=for-the-badge
+[issues-shield]: https://img.shields.io/github/issues/54dbd/SimplePDFTool.svg?style=for-the-badge
 
-[issues-url]: https://github.com/54dbd/Bibtex-to-gbt7714/issues
+[issues-url]: https://github.com/54dbd/SimplePDFTool/issues
 
-[license-shield]: https://img.shields.io/github/license/54dbd/Bibtex-to-gbt7714.svg?style=for-the-badge
+[license-shield]: https://img.shields.io/github/license/54dbd/SimplePDFTool.svg?style=for-the-badge
 
-[license-url]: https://github.com/54dbd/Bibtex-to-gbt7714/blob/master/LICENSE.txt
+[license-url]: https://github.com/54dbd/SimplePDFTool/blob/master/LICENSE.txt
 
 [patreon-shield]: https://img.shields.io/badge/-patreon-black.svg?style=for-the-badge&logo=patreon&colorB=555
 
